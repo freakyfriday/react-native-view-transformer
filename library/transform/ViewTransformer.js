@@ -125,7 +125,7 @@ export default class ViewTransformer extends React.Component {
                         {...gestureResponder}
                         ref={'innerViewRef'}
                         onLayout={this.onLayout.bind(this)}>
-                        <Animated.View
+                        <View
                           style={{
                             flex: 1,
                             opacity: (this.state.scale > 1.05) ? 0 : 1,
@@ -155,7 +155,7 @@ export default class ViewTransformer extends React.Component {
                                     }} >
                                 {this.props.children}  
                             </ModalWrapper>
-                        </Animated.View>
+                        </View>
                   </View>
             </View>
       )
