@@ -5,8 +5,13 @@ import ReactNative, {
   View,
   Animated,
   Easing,
-  NativeModules
+  NativeModules,
+  Text,
+  Dimensions,
+  LayoutAnimation
 } from 'react-native';
+
+import ModalWrapper from 'react-native-modal-wrapper';
 
 import {createResponder} from 'react-native-gesture-responder';
 import Scroller from 'react-native-scroller';
@@ -82,16 +87,14 @@ export default class ViewTransformer extends React.Component {
   componentWillMount() {
     this.gestureResponder = createResponder({
       onStartShouldSetResponder: (evt, gestureState) => true,
+      onStartShouldSetResponderCapture: (evt, gestureState) => true,
       onMoveShouldSetResponderCapture: (evt, gestureState) => true,
       //onMoveShouldSetResponder: this.handleMove,
       onResponderMove: this.onResponderMove.bind(this),
       onResponderGrant: this.onResponderGrant.bind(this),
       onResponderRelease: this.onResponderRelease.bind(this),
       onResponderTerminate: this.onResponderRelease.bind(this),
-      onResponderTerminationRequest: (evt, gestureState) => false, //Do not allow parent view to intercept gesture
-      onResponderSingleTapConfirmed: (evt, gestureState) => {
-        this.props.onSingleTapConfirmed && this.props.onSingleTapConfirmed();
-      }
+      onResponderTerminationRequest: (evt, gestureState) => false //Do not allow parent view to intercept gesture
     });
   }
 
@@ -113,25 +116,54 @@ export default class ViewTransformer extends React.Component {
       gestureResponder = {};
     }
 
-    return (
-      <View
-        {...this.props}
-        {...gestureResponder}
-        ref={'innerViewRef'}
-        onLayout={this.onLayout.bind(this)}>
-        <View
-          style={{
-            flex: 1,
-            transform: [
-                  {scale: this.state.scale},
-                  {translateX: this.state.translateX},
-                  {translateY: this.state.translateY}
-                ]
-          }}>
-          {this.props.children}
-        </View>
-      </View>
-    );
+    var isOpen = this.state.scale > 1;
+
+      return (
+            <View>
+                <View
+                        {...this.props}
+                        {...gestureResponder}
+                        ref={'innerViewRef'}
+                        onLayout={this.onLayout.bind(this)}>
+                        <Animated.View
+                          style={{
+                            flex: 1,
+                            opacity: (this.state.scale > 1.05) ? 0 : 1,
+                            transform: [
+                                  {scale: this.state.scale},
+                                  {translateX: this.state.translateX},
+                                  {translateY: this.state.translateY}
+                                ]
+                          }}>
+                          
+                          {this.props.children}
+                          
+                          <ModalWrapper 
+                                  visible={isOpen}
+                                  animationDuration={0}
+                                  showOverlay={false}
+                                  style={{backgroundColor: 'transparent'}}
+                                  containerStyle={{
+                                    position:'absolute',
+                                    opacity: (this.state.scale > 1.05) ? 1 : 0,
+                                    top: this.state.pageY,
+                                    transform: [
+                                          {scale: this.state.scale},
+                                          {translateX: this.state.translateX},
+                                          {translateY: this.state.translateY}
+                                        ]                                    
+                                    }} >
+                                {this.props.children}  
+                            </ModalWrapper>
+                        </Animated.View>
+                  </View>
+            </View>
+      )
+    
+  }
+
+  onLayoutEmpty(e) {
+    this.props.onLayout && this.props.onLayout(e);
   }
 
   onLayout(e) {
@@ -215,6 +247,7 @@ export default class ViewTransformer extends React.Component {
         translateX: this.state.translateX,
         translateY: this.state.translateY
       });
+
     if (handled) {
       return;
     }
@@ -243,10 +276,6 @@ export default class ViewTransformer extends React.Component {
       }
     }
   }
-
-
-
-
 
 
   performFling(vx, vy) {
@@ -370,7 +399,8 @@ export default class ViewTransformer extends React.Component {
     Animated.timing(this.state.animator, {
       toValue: 1,
       duration: duration,
-      easing: Easing.inOut(Easing.ease)
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: true,
     }).start();
   }
 
@@ -404,6 +434,7 @@ export default class ViewTransformer extends React.Component {
 
 
   updateTransform(transform) {
+    LayoutAnimation.linear();
     this.setState(transform);
   }
 
@@ -418,6 +449,9 @@ export default class ViewTransformer extends React.Component {
 }
 
 ViewTransformer.propTypes = {
+
+  isModal: React.PropTypes.bool,
+
   /**
    * Use false to disable transform. Default is true.
    */
@@ -448,9 +482,7 @@ ViewTransformer.propTypes = {
 
   onViewTransformed: React.PropTypes.func,
 
-  onTransformGestureReleased: React.PropTypes.func,
-
-  onSingleTapConfirmed: React.PropTypes.func
+  onTransformGestureReleased: React.PropTypes.func
 };
 ViewTransformer.defaultProps = {
   maxOverScrollDistance: 20,
@@ -458,5 +490,6 @@ ViewTransformer.defaultProps = {
   enableTranslate: true,
   enableTransform: true,
   maxScale: 1,
-  enableResistance: false
+  enableResistance: false,
+  isModal: false,
 };
